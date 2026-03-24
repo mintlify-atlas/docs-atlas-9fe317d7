@@ -1,0 +1,96 @@
+{
+  "projectType": "general",
+  "projectName": "Beast Card Clash",
+  "projectDescription": "A turn-based collectible card strategy game built in Godot 4, inspired by Colombian biodiversity and the faculties of the Universidad Nacional de Colombia.",
+  "theme": "palm",
+  "primaryColor": "#848c8e",
+  "lightColor": "#11161e",
+  "darkColor": "#cfd0d2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": ["introduction", "quickstart"]
+          },
+          {
+            "group": "Game Mechanics",
+            "pages": [
+              "mechanics/cards",
+              "mechanics/elements",
+              "mechanics/battle",
+              "mechanics/characters"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/installation",
+              "guides/playing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Developer Guide",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "dev/overview",
+              "dev/autoloads",
+              "dev/battle-state-machine"
+            ]
+          },
+          {
+            "group": "Systems Reference",
+            "pages": [
+              "dev/battle-manager",
+              "dev/card-system",
+              "dev/scene-manager",
+              "dev/music-manager",
+              "dev/flags-manager"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "dev/contributing",
+              "dev/code-style"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Turn-based card strategy gameplay with elemental mechanics (Air, Earth, Energy, Fire, Water)",
+    "Colombian native animal characters (Bear, Condor, Chameleon, Frog) with multiple skins",
+    "Team/faction system inspired by UNAL university faculties",
+    "3D interactive dice rolling for turn mechanics",
+    "Battle state machine with Start, Loop, Turn, Referee, and End phases",
+    "AI bot opponents with random deck generation",
+    "Collectible card system with value-based combat resolution",
+    "Dialogue system integration via DialogueManager autoload",
+    "Centralized scene, music, and flags management via Godot autoloads"
+  ],
+  "publicApiSurface": [
+    "GameConstants.Elements (NONE, AIR, EARTH, ENERGY, FIRE, WATER)",
+    "GameConstants.Teams (ACETILES, ADN, INGENIOSOS_ELEMENTALES, PHOTO_AGROS, PLUMA_DORADA, RPC_TEAM, REAL_PINCEL, VA_GAMES, ZOOTECNICOS)",
+    "GameConstants.Species (BEAR, CONDOR, CHAMALEON, FROG)",
+    "GameConstants.SKINS — available skins per species",
+    "GameConstants.MAX_CARD_VALUE = 10",
+    "SceneManager.change_to_scene(scene_name: String)",
+    "MusicManager.play_music(music_name: String)",
+    "MusicManager.switch_music_playing(on = null)",
+    "FlagsManager.get_flag(flag: String) -> bool",
+    "FlagsManager.set_flag(flag: String, value: bool)",
+    "PlayerStats.player_name, PlayerStats.team, PlayerStats.species, PlayerStats.skin",
+    "BattleManager.setup_player(), setup_bots(), setup_ui()",
+    "CardScene.card_selected signal (emits Card)",
+    "CardScene.set_properties(values: Dictionary)",
+    "Dice.shuffle_dice(), Dice.thrown_dice signal"
+  ]
+}

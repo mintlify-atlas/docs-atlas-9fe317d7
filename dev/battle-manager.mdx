@@ -1,0 +1,183 @@
+---
+title: "BattleManager"
+description: "The central orchestrator for battle initialization and player management."
+keywords: ["battle", "player", "bot", "state machine", "deck", "godot"]
+---
+
+`BattleManager` is the entry point for every match in Beast Card Clash. It extends `StateMachine` and is attached to the battle scene. It is responsible for constructing the human player, spawning AI bots, wiring up signal connections, and initializing the battlefield before the state machine begins managing turn flow.
+
+<Note>
+  `BattleManager` is a scene-level node, not an autoload. It exists only while the battle scene is active. For global singletons, see [Autoloads](/dev/autoloads).
+</Note>
+
+## Class overview
+
+```gdscript battle_manager.gd
+class_name BattleManager extends StateMachine
+```
+
+<Columns cols={2}>
+  <Card title="Initializes players" icon="users">
+    Creates the human player from `PlayerStats` and generates 1–3 AI bots with random decks.
+  </Card>
+  <Card title="Wires the UI" icon="layout-panel-top">
+    Connects `BattleUI` to player data and disables the 3D dice (via `BattleWorld`) until the state machine permits a roll.
+  </Card>
+  <Card title="Connects signals" icon="cable">
+    Links `deck_updated` on the human player to `BattleUI.set_hand_from_deck` so the hand rerenders automatically.
+  </Card>
+  <Card title="Feeds the state machine" icon="diagram-project">
+    Exposes the populated `players` array so the [StateMachine](/dev/battle-state-machine) can iterate over participants during each phase.
+  </Card>
+</Columns>
+
+## Properties
+
+<ResponseField name="MAX_PLAYERS" type="int" required>
+  Maximum number of participants in a single battle, including the human player and all bots. Default: `4`.
+</ResponseField>
+
+<ResponseField name="battle_ui" type="BattleUI" required>
+  Exported reference to the `BattleUI` node in the battle scene. Assign this in the Godot Inspector.
+</ResponseField>
+
+<ResponseField name="battle_world" type="BattleWorld" required>
+  Exported reference to the `BattleWorld` node, which owns the 3D dice and rocks. `BattleManager` calls `battle_world.set_dice(false)` during `setup_world()` to disable dice interaction at match start.
+</ResponseField>
+
+<ResponseField name="player" type="Player">
+  The single human `Player` instance. Populated by `setup_player()`. Use this reference anywhere you need to read or modify the human player's state.
+</ResponseField>
+
+<ResponseField name="players" type="Array[Player]">
+  All participants — the human player plus however many bots were created. The array is shuffled by `setup_bots()` to randomize turn order, so position `0` is not guaranteed to be the human player. The [StateMachine](/dev/battle-state-machine) iterates this array to drive turns.
+</ResponseField>
+
+<ResponseField name="rocks" type="Array[RockScene.Rock]">
+  All rock objects placed in the battle scene. Declared for future use by battle states that need to reference world positions.
+</ResponseField>
+
+## Methods
+
+### `setup_player()`
+
+Creates the human `Player` from the globally stored `PlayerStats`, builds their deck, appends them to `players`, and connects the `deck_updated` signal to keep the hand display in sync.
+
+```gdscript
+func setup_player() -> void:
+    player = Player.new(PlayerStats.player_name, PlayerStats.team, false)
+    player.create_deck()
+    players.append(player)
+    player.randomize()  # Temporary
+    player.deck_updated.connect(battle_ui.set_hand_from_deck)
+```
+
+<Warning>
+  The `player.randomize()` call is **temporary scaffolding** — it assigns a random state to the player for development and testing purposes. Remove or replace it with deterministic initialization before shipping.
+</Warning>
+
+The signal connection on the last line means any time the player's deck changes (cards drawn, discarded, or reordered), `BattleUI.set_hand_from_deck` fires automatically with the updated deck. You do not need to call `set_hand_from_deck` manually after this point.
+
+### `setup_bots()`
+
+Spawns between 1 and `MAX_PLAYERS - 1` AI bots, each with a freshly generated deck. After all bots are added, the full `players` array is shuffled to randomize turn order.
+
+```gdscript
+func setup_bots() -> void:
+    var bots_count := randi_range(1, MAX_PLAYERS - 1)
+    for i in range(bots_count):
+        var new_bot := Player.new()
+        new_bot.create_deck()
+        players.append(new_bot)
+        print_debug("[BattleManager] Nuevo bot creado: %s!" % new_bot.player_name)
+        # ! Temporal
+        new_bot.randomize()
+
+    players.shuffle()
+    print_debug(
+        "[BattleManager] %s jugadores en juego: %s"
+        % [bots_count, players.map(func(p): return p.player_name)]
+    )
+```
+
+<ParamField path="bots_count" type="int">
+  Chosen randomly via `randi_range(1, MAX_PLAYERS - 1)`. With `MAX_PLAYERS = 4`, this produces 1, 2, or 3 bots per battle.
+</ParamField>
+
+<Tip>
+  Bot `Player` instances are constructed with no arguments (`Player.new()`), so they receive auto-generated names. Human players pass `PlayerStats.player_name` and `PlayerStats.team` explicitly.
+</Tip>
+
+### `setup_ui()`
+
+Prepares the battle UI for the start of a match: refreshes all player stat panels, populates the human player's hand from their current deck, and hides the end-of-game UI.
+
+```gdscript
+func setup_ui() -> void:
+    battle_ui.refresh_player_stats(players)
+    battle_ui.set_hand_from_deck(player.deck)
+    battle_ui.set_end_ui(false)
+```
+
+Call `setup_ui()` after both `setup_player()` and `setup_bots()` have completed, so `players` is fully populated when `refresh_player_stats` iterates over it.
+
+### `setup_world()`
+
+Configures the 3D world elements. Disables dice interaction at match start so the player cannot roll before the state machine permits it.
+
+```gdscript
+func setup_world() -> void:
+    battle_world.set_dice(false)
+```
+
+`BattleWorld.set_dice(enabled: bool)` sets `dice.clickable` on the underlying `Dice` node. The battle state machine re-enables dice interaction at the start of the human player's turn.
+
+## Initialization sequence
+
+`BattleStart` calls all four setup methods in this order:
+
+<Steps>
+  <Step title="setup_player()">
+    Create the human player, build their deck, and connect the `deck_updated` → `set_hand_from_deck` signal.
+  </Step>
+  <Step title="setup_bots()">
+    Randomly generate 1–3 bots, append them to `players`, then shuffle `players` to determine turn order.
+  </Step>
+  <Step title="setup_ui()">
+    Refresh stat panels for all players, seed the hand display, and hide the end-game UI.
+  </Step>
+  <Step title="setup_world()">
+    Disable the 3D dice until the state machine enables it on the human player's turn.
+  </Step>
+</Steps>
+
+## Signal wiring
+
+The most important signal connection established by `BattleManager` is:
+
+```gdscript
+player.deck_updated.connect(battle_ui.set_hand_from_deck)
+```
+
+| Signal | Source | Target | Effect |
+|--------|--------|--------|--------|
+| `deck_updated` | `Player` | `BattleUI.set_hand_from_deck` | Rerenders the hand display whenever the player's deck changes |
+
+This one-liner keeps the [Card System](/dev/card-system) visuals in sync with game state without requiring manual UI refresh calls throughout your code.
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Battle state machine" icon="diagram-project" href="/dev/battle-state-machine">
+    How the five-phase state machine consumes `players` and orchestrates turn flow.
+  </Card>
+  <Card title="Card system" icon="cards-blank" href="/dev/card-system">
+    How `CardScene` and the inner `Card` data class represent cards in the hand.
+  </Card>
+  <Card title="Battle mechanics" icon="swords" href="/mechanics/battle">
+    Player-facing rules for how a battle round works.
+  </Card>
+  <Card title="Autoloads" icon="bolt" href="/dev/autoloads">
+    Global singletons (`SceneManager`, `MusicManager`, `FlagsManager`) available to `BattleManager`.
+  </Card>
+</CardGroup>

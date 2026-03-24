@@ -1,0 +1,125 @@
+---
+title: "SceneManager"
+description: "Centralized scene transition management for Beast Card Clash."
+keywords: ["scene", "transition", "autoload", "PackedScene", "SceneManager"]
+---
+
+`SceneManager` is an autoload singleton that wraps Godot's built-in `change_scene_to_packed` behind a name-based API. Instead of scattering `preload` calls and packed-scene references throughout your scripts, you call a single method with a string name and `SceneManager` handles the rest.
+
+<Note>
+  `SceneManager` is registered as an autoload in the project settings, which means it is available from any script in the game without importing or obtaining a node reference.
+</Note>
+
+## Class overview
+
+```gdscript scene_manager.gd
+# extends Node (Autoload singleton)
+```
+
+At startup, `SceneManager` loads a `Scenes` resource (`scenes.tres`) from `uid://bn7v8txng2pda`. This resource maps human-readable string names to `PackedScene` instances and is viewable and editable in the Godot Inspector.
+
+## Initialization
+
+```gdscript
+func _ready():
+    _scenes.expected_type = TYPE_OBJECT
+    _scenes.check_item_types()
+```
+
+`_ready()` validates that every entry in the `Scenes` resource is a proper `Object` (i.e., a loaded `PackedScene`). If any entry has the wrong type, `check_item_types()` logs an error at startup rather than failing silently at the moment of a scene transition.
+
+<Tip>
+  The validation in `_ready()` surfaces configuration mistakes early. If you add a new scene to `scenes.tres` but accidentally leave an entry blank or assign the wrong asset type, you will see the error in the output panel when the game boots — not when a player triggers that transition for the first time.
+</Tip>
+
+## API reference
+
+### `change_to_scene(scene_name: String) -> void`
+
+Transitions to the scene identified by `scene_name`, replacing the current scene tree root.
+
+<ParamField path="scene_name" type="String" required>
+  The name of the scene as registered in `scenes.tres`. This is a case-sensitive string key. If the key does not exist, `_scenes.get_item()` will raise an error.
+</ParamField>
+
+```gdscript
+func change_to_scene(scene_name: String) -> void:
+    get_tree().change_scene_to_packed(_scenes.get_item(scene_name))
+```
+
+## Usage examples
+
+<Tabs>
+  <Tab title="Navigate to battle">
+    ```gdscript
+    # From a menu button press handler
+    func _on_play_button_pressed() -> void:
+        SceneManager.change_to_scene("battle")
+    ```
+  </Tab>
+  <Tab title="Return to main menu">
+    ```gdscript
+    # From a pause menu or game-over screen
+    func _on_quit_pressed() -> void:
+        SceneManager.change_to_scene("main_menu")
+    ```
+  </Tab>
+  <Tab title="Combined with FlagsManager">
+    ```gdscript
+    # Decide which scene to load based on a flag
+    func _on_start_pressed() -> void:
+        if FlagsManager.get_flag("tutorial_completed"):
+            SceneManager.change_to_scene("battle")
+        else:
+            SceneManager.change_to_scene("tutorial")
+    ```
+  </Tab>
+</Tabs>
+
+## The Scenes resource
+
+All scene names are defined in `scenes.tres`. You can view and edit this file in the Godot Inspector by opening the resource in the FileSystem dock.
+
+<Note>
+  Scene names in `scenes.tres` are the only source of truth for valid `change_to_scene` arguments. There is no code-level enum or constant listing them — use the Inspector to see which names are registered.
+</Note>
+
+### Adding a new scene
+
+<Steps>
+  <Step title="Create and save your scene">
+    Build your new scene in Godot and save it as a `.tscn` file (e.g., `res://scenes/credits.tscn`).
+  </Step>
+  <Step title="Open scenes.tres in the Inspector">
+    In the FileSystem dock, locate `scenes.tres` and open it. The resource will display its dictionary of name → PackedScene entries.
+  </Step>
+  <Step title="Add a new entry">
+    Add a new key-value pair: set the key to a descriptive string (e.g., `"credits"`) and the value to your new `.tscn` file.
+  </Step>
+  <Step title="Verify at startup">
+    Run the project. If `check_item_types()` in `_ready()` logs no errors, your scene is correctly registered and ready to use.
+  </Step>
+  <Step title="Call change_to_scene">
+    Use your new key anywhere in the project:
+    ```gdscript
+    SceneManager.change_to_scene("credits")
+    ```
+  </Step>
+</Steps>
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Autoloads" icon="bolt" href="/dev/autoloads">
+    Overview of all autoload singletons and when they are initialized.
+  </Card>
+  <Card title="FlagsManager" icon="flag" href="/dev/flags-manager">
+    Use flags to decide which scene to load at runtime.
+  </Card>
+  <Card title="MusicManager" icon="music" href="/dev/music-manager">
+    Switch background music when you transition between scenes.
+  </Card>
+  <Card title="Architecture overview" icon="sitemap" href="/dev/overview">
+    How autoloads, scene nodes, and the state machine fit together.
+  </Card>
+</CardGroup>

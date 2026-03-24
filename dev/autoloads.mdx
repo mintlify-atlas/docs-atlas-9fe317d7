@@ -1,0 +1,319 @@
+---
+title: "Autoloads & singletons"
+description: "Reference for all globally accessible autoload nodes in Beast Card Clash."
+keywords: ["autoload", "singleton", "GameConstants", "PlayerStats", "SceneManager", "MusicManager", "FlagsManager", "DialogueManager"]
+---
+
+Godot **autoloads** are nodes that the engine instantiates once at startup and adds to the root of the scene tree. Every other scene and script can access them by name — no imports, no `get_parent()` chains.
+
+Beast Card Clash registers six autoloads in `project.godot`:
+
+```ini project.godot
+[autoload]
+DialogueManager="*uid://c3rodes2l3gxb"
+SceneManager="*res://autoload/scene_manager.gd"
+MusicManager="*res://autoload/music_manager.gd"
+FlagsManager="*res://autoload/flags_manager.gd"
+GameConstants="*res://autoload/game_constants.gd"
+PlayerStats="*res://autoload/player_stats.gd"
+```
+
+<Tip>
+  Autoloads are accessible from any script with just their name — for example,
+  `GameConstants.Elements.FIRE` or `SceneManager.change_to_scene("battle")`.
+  You do not need to get a reference to them first.
+</Tip>
+
+---
+
+## GameConstants
+
+**File:** `autoload/game_constants.gd`
+
+`GameConstants` is a pure data singleton. It defines the enums and constants that every other system references. You should never write to it at runtime.
+
+### Enums
+
+<AccordionGroup>
+  <Accordion title="Elements">
+    Represents the six elemental types a card can carry.
+
+    ```gdscript
+    enum Elements {
+        NONE, AIR, EARTH, ENERGY, FIRE, WATER
+    }
+    ```
+
+    | Value    | Description                      |
+    | -------- | -------------------------------- |
+    | `NONE`   | No elemental affinity            |
+    | `AIR`    | Air element                      |
+    | `EARTH`  | Earth element                    |
+    | `ENERGY` | Energy element                   |
+    | `FIRE`   | Fire element                     |
+    | `WATER`  | Water element                    |
+
+    See [Elements](/mechanics/elements) for how these interact in battle.
+  </Accordion>
+
+  <Accordion title="Teams">
+    All nine selectable faculty teams, plus a sentinel value.
+
+    ```gdscript
+    enum Teams {
+        NO_TEAM,
+        ACETILES, ADN, INGENIOSOS_ELEMENTALES,
+        PHOTO_AGROS, PLUMA_DORADA, RPC_TEAM, REAL_PINCEL,
+        VA_GAMES, ZOOTECNICOS
+    }
+    ```
+
+    `NO_TEAM` is the default before a player selects a team in the character selector.
+  </Accordion>
+
+  <Accordion title="Species">
+    The four playable character species.
+
+    ```gdscript
+    enum Species {
+        BEAR, CONDOR, CHAMALEON, FROG
+    }
+    ```
+
+    Each species has one or more skins defined in `SKINS`. See [Characters](/mechanics/characters) for details.
+  </Accordion>
+</AccordionGroup>
+
+### Constants
+
+| Constant          | Type                                       | Value | Description                                       |
+| ----------------- | ------------------------------------------ | ----- | ------------------------------------------------- |
+| `MAX_CARD_VAlUE`  | `int`                                      | `10`  | Maximum numeric value a card can have (note: typo in source — `VAlUE` not `VALUE`) |
+| `TEAMS_MEMBERS`   | `Dictionary[Teams, Array]`                 | —     | Maps each team to an array of members (all empty in current version) |
+| `SKINS`           | `Dictionary[Species, PackedStringArray]`   | —     | Maps each species to its available skin names     |
+
+<Note>
+  The constant is spelled `MAX_CARD_VAlUE` (capital A in `VAlUE`) in the source file — a typo. When referencing it in code, use the exact spelling from `game_constants.gd`.
+</Note>
+
+### SKINS reference
+
+```gdscript
+const SKINS: Dictionary[Species, PackedStringArray] = {
+    Species.BEAR:      ["base", "andean", "black", "grizzly", "panda", "polar"],
+    Species.CHAMALEON: ["base"],
+    Species.CONDOR:    ["base"],
+    Species.FROG:      ["base", "green", "perez"]
+}
+```
+
+### Usage example
+
+```gdscript
+# Check if a skin name is valid for the player's current species
+var valid_skins := GameConstants.SKINS[PlayerStats.species]
+if PlayerStats.skin in valid_skins:
+    print("Skin is valid")
+
+# Compare an element
+if card.element == GameConstants.Elements.FIRE:
+    apply_burn_effect(card)
+```
+
+---
+
+## PlayerStats
+
+**File:** `autoload/player_stats.gd`
+
+`PlayerStats` stores the mutable session data for the human player. It is written to during character selection and read by the battle scene to configure the player's character.
+
+### Properties
+
+| Property      | Type                      | Default                              | Description                                 |
+| ------------- | ------------------------- | ------------------------------------ | ------------------------------------------- |
+| `player_name` | `String`                  | `"Osorio"`                           | The player's display name                   |
+| `team`        | `GameConstants.Teams`     | `GameConstants.Teams.NO_TEAM`        | The selected faculty team                   |
+| `species`     | `GameConstants.Species`   | `GameConstants.Species.BEAR`         | The selected character species              |
+| `skin`        | `String`                  | First skin for the selected species  | The selected skin variant                   |
+
+### Source
+
+```gdscript
+extends Node
+
+var player_name: String = "Osorio"
+var team: GameConstants.Teams = GameConstants.Teams.NO_TEAM
+var species: GameConstants.Species = GameConstants.Species.BEAR
+var skin: String = GameConstants.SKINS[species][0]
+```
+
+### Usage example
+
+```gdscript
+# In character selector — write player choices
+PlayerStats.player_name = name_input.text
+PlayerStats.team = GameConstants.Teams.ADN
+PlayerStats.species = GameConstants.Species.FROG
+PlayerStats.skin = "perez"
+
+# In battle scene — read to configure player character
+var character_skin := PlayerStats.skin
+var team_name := GameConstants.Teams.keys()[PlayerStats.team]
+```
+
+<Warning>
+  `PlayerStats` persists for the entire session. If the player navigates back to
+  the character selector to change their choices, make sure to overwrite all four
+  fields — otherwise stale values from a previous run will carry over.
+</Warning>
+
+---
+
+## SceneManager
+
+**File:** `autoload/scene_manager.gd`
+
+`SceneManager` is the single authority for scene transitions. It loads scenes from a `Scenes` resource that maps string names to packed scenes, so the rest of the codebase never needs hard-coded scene paths.
+
+### API
+
+```gdscript
+func change_to_scene(scene_name: String) -> void
+```
+
+Transitions immediately to the named scene. The name must match a key in the internal `Scenes` resource.
+
+### Usage example
+
+```gdscript
+# From the character selector, after the player confirms their choices
+SceneManager.change_to_scene("battle")
+
+# From the end screen back button
+SceneManager.change_to_scene("start_menu")
+```
+
+<Note>
+  Always use `SceneManager.change_to_scene()` rather than calling
+  `get_tree().change_scene_to_packed()` or `change_scene_to_file()` directly.
+  This keeps all scene paths in one place and makes refactoring easier.
+</Note>
+
+See [Scene manager](/dev/scene-manager) for the full implementation reference.
+
+---
+
+## MusicManager
+
+**File:** `autoload/music_manager.gd`
+
+`MusicManager` extends `AudioStreamPlayer` and controls background music throughout the game. It loads tracks from a `Playlist` resource keyed by name.
+
+### API
+
+```gdscript
+func play_music(music_name: String) -> void
+func switch_music_playing(on = null) -> void
+```
+
+#### `play_music(music_name)`
+
+Loads the named track from the playlist and starts playing it immediately. Replaces any currently playing track.
+
+#### `switch_music_playing(on)`
+
+Toggles or sets the paused state of the current track.
+
+| Argument  | Behavior                                           |
+| --------- | -------------------------------------------------- |
+| `null` (default) | Toggles pause — pauses if playing, resumes if paused |
+| `true`    | Pauses the music                                   |
+| `false`   | Resumes the music                                  |
+
+### Usage example
+
+```gdscript
+# Play the battle theme when the battle scene loads
+# (track names are keys in playlist.tres; "battle" maps to battle.ogg)
+MusicManager.play_music("battle")
+
+# Pause during a cutscene
+MusicManager.switch_music_playing(true)
+
+# Resume after the cutscene
+MusicManager.switch_music_playing(false)
+
+# Toggle on/off with a button press
+MusicManager.switch_music_playing()
+```
+
+See [Music manager](/dev/music-manager) for the full implementation reference.
+
+---
+
+## FlagsManager
+
+**File:** `autoload/flags_manager.gd`
+
+`FlagsManager` is a simple boolean flag store backed by a `Flags` resource. Use it to track one-time events like "has the tutorial been seen" or "has the player won at least once" without adding variables to scene scripts.
+
+### API
+
+```gdscript
+func get_flag(flag: String) -> bool
+func set_flag(flag: String, value: bool) -> void
+```
+
+#### `get_flag(flag)`
+
+Returns the current value of the named flag. Returns `false` for any flag that has not been explicitly set.
+
+#### `set_flag(flag, value)`
+
+Sets the named flag to `value`. Prints a debug message indicating whether the flag was activated or deactivated.
+
+### Usage example
+
+```gdscript
+# Check before showing the tutorial
+if not FlagsManager.get_flag("tutorial_shown"):
+    SceneManager.change_to_scene("tutorial")
+    FlagsManager.set_flag("tutorial_shown", true)
+
+# Mark that the player has completed at least one battle
+FlagsManager.set_flag("first_battle_completed", true)
+```
+
+See [Flags manager](/dev/flags-manager) for the full implementation reference.
+
+---
+
+## DialogueManager
+
+**Plugin:** `addons/dialogue_manager`
+
+`DialogueManager` is a third-party Godot plugin that drives all in-game dialogue and narrative sequences. It is registered as an autoload automatically when the plugin is enabled.
+
+Dialogue content lives in `assets/dialogues/` as `.dialogue` files:
+
+| File           | Used for                              |
+| -------------- | ------------------------------------- |
+| `begin.dialogue`    | Opening narrative before a battle |
+| `pregame.dialogue`  | Pre-match character introductions |
+| `win.dialogue`      | Victory sequence                  |
+| `lose.dialogue`     | Defeat sequence                   |
+
+### Usage example
+
+```gdscript
+# Start a dialogue sequence by its resource and starting title
+var dialogue := load("res://assets/dialogues/win.dialogue")
+DialogueManager.show_dialogue_balloon(dialogue, "start")
+```
+
+<Note>
+  Refer to the [Dialogue Manager plugin documentation](https://github.com/nathanhoad/godot_dialogue_manager)
+  for the full API. The autoload name `DialogueManager` is provided by the plugin
+  and cannot be renamed without modifying the plugin itself.
+</Note>

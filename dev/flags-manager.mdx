@@ -1,0 +1,211 @@
+---
+title: "FlagsManager"
+description: "Boolean flag management for game state tracking."
+keywords: ["flags", "boolean", "state", "tutorial", "autoload", "FlagsManager"]
+---
+
+`FlagsManager` is an autoload singleton that provides a centralized store of named boolean flags. Use it to track persistent game state — tutorial completion, unlocked features, first-run flows, and any other binary condition that needs to be readable across different scenes and systems.
+
+<Note>
+  `FlagsManager` is registered as an autoload, so it is available from any script in the project. All flag values are `bool` — there are no integers, strings, or other types.
+</Note>
+
+## Class overview
+
+```gdscript flags_manager.gd
+# extends Node (Autoload singleton)
+```
+
+At startup, `FlagsManager` loads a `Flags` resource (`flags.tres`) from `uid://calw1rmsghoh8`. Every entry in `flags.tres` is a named boolean value.
+
+## Initialization
+
+```gdscript
+func _ready():
+    _flags.expected_type = TYPE_BOOL
+    _flags.check_item_types()
+```
+
+`_ready()` enforces that every entry in `flags.tres` is strictly a boolean. If a flag is accidentally assigned a non-boolean value (for example during resource editing), `check_item_types()` logs an error at startup before any game logic runs.
+
+<Tip>
+  The `TYPE_BOOL` validation is stricter than `SceneManager` and `MusicManager`, which use `TYPE_OBJECT`. This means even an integer `0` or `1` in `flags.tres` will trigger an error — every entry must be a true Godot `bool`.
+</Tip>
+
+## API reference
+
+### `get_flag(flag: String) -> bool`
+
+Returns the current value of the named flag.
+
+<ParamField path="flag" type="String" required>
+  The flag name as registered in `flags.tres`. Case-sensitive.
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  The current boolean value of the flag. Returns `false` by default for flags that exist but have not been explicitly set to `true`.
+</ResponseField>
+
+```gdscript
+func get_flag(flag: String) -> bool:
+    return _flags.get_item(flag)
+```
+
+### `set_flag(flag: String, value: bool) -> void`
+
+Updates the value of the named flag and emits a debug log message.
+
+<ParamField path="flag" type="String" required>
+  The flag name as registered in `flags.tres`. Case-sensitive.
+</ParamField>
+
+<ParamField path="value" type="bool" required>
+  The new boolean value. Pass `true` to activate the flag, `false` to deactivate it.
+</ParamField>
+
+```gdscript
+func set_flag(flag: String, value: bool) -> void:
+    print_debug("Bandera %s: %s" % ["activada" if value else "desactivada", flag])
+    _flags.set_item(flag, value)
+```
+
+#### Debug logging
+
+Every `set_flag` call prints a `print_debug` message in the format:
+
+```
+Bandera activada: tutorial_completed
+Bandera desactivada: tutorial_completed
+```
+
+These messages appear in the Godot output panel during development builds and are stripped from release exports automatically by Godot's `print_debug` behavior.
+
+## Usage examples
+
+<Tabs>
+  <Tab title="Check a flag">
+    ```gdscript
+    # Read the flag value and branch accordingly
+    if FlagsManager.get_flag("tutorial_completed"):
+        SceneManager.change_to_scene("battle")
+    else:
+        SceneManager.change_to_scene("tutorial")
+    ```
+  </Tab>
+  <Tab title="Set a flag">
+    ```gdscript
+    # Mark tutorial as done at the end of the tutorial scene
+    func _on_tutorial_finished() -> void:
+        FlagsManager.set_flag("tutorial_completed", true)
+        SceneManager.change_to_scene("battle")
+    ```
+  </Tab>
+  <Tab title="Toggle a flag">
+    ```gdscript
+    # Read current state, flip it, write it back
+    var current: bool = FlagsManager.get_flag("show_hints")
+    FlagsManager.set_flag("show_hints", not current)
+    ```
+  </Tab>
+  <Tab title="Reset flags on new game">
+    ```gdscript
+    # Clear progression flags when starting a fresh game
+    func reset_progress() -> void:
+        FlagsManager.set_flag("tutorial_completed", false)
+        FlagsManager.set_flag("first_battle_won", false)
+    ```
+  </Tab>
+</Tabs>
+
+## Practical example: tutorial gate
+
+A common pattern in Beast Card Clash is using `FlagsManager` and `SceneManager` together to route players correctly on game start.
+
+```gdscript
+# res://scenes/main_menu.gd
+func _on_play_button_pressed() -> void:
+    if FlagsManager.get_flag("tutorial_completed"):
+        # Returning player — go straight to battle
+        MusicManager.play_music("battle_theme")
+        SceneManager.change_to_scene("battle")
+    else:
+        # First-time player — run the tutorial first
+        MusicManager.play_music("tutorial_theme")
+        SceneManager.change_to_scene("tutorial")
+```
+
+At the end of the tutorial:
+
+```gdscript
+# res://scenes/tutorial.gd
+func _on_tutorial_complete() -> void:
+    FlagsManager.set_flag("tutorial_completed", true)
+    MusicManager.play_music("battle_theme")
+    SceneManager.change_to_scene("battle")
+```
+
+## The Flags resource
+
+All flag names and their initial values are defined in `flags.tres`. Open this file in the Godot Inspector to view the full list of flags.
+
+<Note>
+  `flags.tres` is the single source of truth for valid flag names. You cannot call `get_flag` or `set_flag` with a name that does not exist in this resource — `_flags.get_item()` will raise an error.
+</Note>
+
+### Adding a new flag
+
+<Steps>
+  <Step title="Open flags.tres in the Inspector">
+    Locate `flags.tres` in the FileSystem dock and open it. You will see the existing name → bool entries.
+  </Step>
+  <Step title="Add a new entry">
+    Add a new key-value pair. The key is your flag name (e.g., `"first_battle_won"`), and the value must be a boolean (`false` for a flag that starts inactive).
+  </Step>
+  <Step title="Verify at startup">
+    Run the project. If `check_item_types()` in `_ready()` logs no errors, your flag is registered and valid.
+  </Step>
+  <Step title="Use the flag in code">
+    ```gdscript
+    # Check it
+    if FlagsManager.get_flag("first_battle_won"):
+        show_achievement_banner()
+
+    # Set it
+    FlagsManager.set_flag("first_battle_won", true)
+    ```
+  </Step>
+</Steps>
+
+## What flags are used for
+
+<AccordionGroup>
+  <Accordion title="Tutorial completion tracking">
+    The primary use case: gate first-time players into the tutorial and route returning players directly to battle. The `tutorial_completed` flag is read on the main menu and set at the end of the tutorial scene.
+  </Accordion>
+  <Accordion title="Feature toggles">
+    Enable or disable optional game features (e.g., `show_hints`, `enable_experimental_mode`) without code changes. Flip the flag in `flags.tres` and the behavior changes on next run.
+  </Accordion>
+  <Accordion title="Progress milestones">
+    Track one-time achievements like winning a first battle (`first_battle_won`) or unlocking a character skin. These flags persist for the session and can inform UI states across scenes.
+  </Accordion>
+  <Accordion title="Debug and development flags">
+    Add temporary flags (e.g., `skip_intro`, `unlock_all_cards`) during development to speed up testing. Because `set_flag` calls `print_debug`, every change is visible in the output panel.
+  </Accordion>
+</AccordionGroup>
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Autoloads" icon="bolt" href="/dev/autoloads">
+    Overview of all autoload singletons including `FlagsManager`.
+  </Card>
+  <Card title="SceneManager" icon="shuffle" href="/dev/scene-manager">
+    Use `SceneManager.change_to_scene` after reading a flag to route players.
+  </Card>
+  <Card title="MusicManager" icon="music" href="/dev/music-manager">
+    Combine with `FlagsManager` to play different music based on game state.
+  </Card>
+  <Card title="Architecture overview" icon="sitemap" href="/dev/overview">
+    How autoloads fit into the overall project structure.
+  </Card>
+</CardGroup>

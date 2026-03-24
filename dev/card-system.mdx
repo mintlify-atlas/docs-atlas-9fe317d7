@@ -1,0 +1,235 @@
+---
+title: "Card System"
+description: "How cards are represented, displayed, and interacted with in Beast Card Clash."
+keywords: ["card", "CardScene", "TextureButton", "element", "animation", "flip", "hover", "ondulation"]
+---
+
+The card system in Beast Card Clash has two layers: a **visual node** (`CardScene`) that handles rendering and interaction, and a **lightweight data object** (`Card`) that travels through game logic without carrying scene overhead. Understanding the boundary between these two layers is key to working with cards effectively.
+
+<Columns cols={2}>
+  <Card title="CardScene" icon="image">
+    A `TextureButton` subclass that owns the sprite, animations, and the `card_selected` signal. Lives in the scene tree.
+  </Card>
+  <Card title="Card (inner class)" icon="database">
+    A minimal data container holding only `element` and `value`. Safe to pass between systems and store in arrays.
+  </Card>
+</Columns>
+
+## CardScene
+
+```gdscript card.gd
+class_name CardScene extends TextureButton
+```
+
+`CardScene` is the object you place in the scene tree when you want to display a playable card. It manages its own sprite, runs continuous and event-driven animations, and emits a signal when the player selects it.
+
+### Exported properties
+
+<ResponseField name="element" type="GameConstants.Elements" required>
+  The elemental type of the card (Air, Earth, Energy, Fire, or Water). Setting this property calls `_update_sprite()` automatically to swap to the correct texture. See [Elements](/mechanics/elements) for type details.
+</ResponseField>
+
+<ResponseField name="value" type="int" required>
+  The numeric power of the card. Valid range: `1` to `MAX_CARD_VAlUE` (= 10). Setting this property calls `_update_sprite()`. Values outside the valid range are clamped to `0` by the inner `Card` class setter.
+</ResponseField>
+
+<ResponseField name="hide_card" type="bool">
+  When `true`, the card displays face-down using the `placeholder` texture from `CardsList`. Setting this property triggers the `_flip_card()` animation rather than an instant texture swap.
+</ResponseField>
+
+<ResponseField name="disable_card" type="bool">
+  When `true`, the card is grayed out and interaction is blocked. Setting this property calls `_update_sprite()` to apply the visual disabled state.
+</ResponseField>
+
+<ResponseField name="cards_list" type="CardsList">
+  A resource that maps every `(element, value)` combination to its texture, plus a `placeholder` texture used for face-down cards. Assign in the Inspector or load programmatically.
+</ResponseField>
+
+### Signal
+
+```gdscript
+signal card_selected(card: Card)
+```
+
+Emitted when the player presses the card. The signal carries a lightweight `Card` data object (see [inner class](#card-inner-class) below), not the full `CardScene` node. The signal is **suppressed** if `hide_card` or `disable_card` is `true`.
+
+```gdscript
+# Connect from BattleManager or a hand display node
+card_scene.card_selected.connect(_on_card_selected)
+
+func _on_card_selected(card: Card) -> void:
+    print("Player selected %s card with value %d" % [card.element, card.value])
+```
+
+### Methods
+
+#### `set_properties(values: Dictionary) -> void`
+
+Batch-sets multiple exported properties from a dictionary in a single call. Calls `_update_sprite()` once after all properties are applied, making it more efficient than setting properties individually when you need to change several at once.
+
+<ParamField path="values" type="Dictionary" required>
+  A dictionary mapping property name strings to their new values. Any key that does not exist as a property on `CardScene` triggers `push_error` and is skipped — the remaining properties are still applied.
+</ParamField>
+
+```gdscript
+# Set element and value together
+card_scene.set_properties({
+    "element": GameConstants.Elements.FIRE,
+    "value": 7
+})
+
+# Hide and disable at the same time
+card_scene.set_properties({
+    "hide_card": true,
+    "disable_card": true
+})
+```
+
+<Warning>
+  If you pass a key that does not match any property on `CardScene`, `push_error` is called and that key is skipped. The dictionary is not validated before iteration, so partial application is possible.
+</Warning>
+
+#### `get_abstract_card() -> Card`
+
+Returns a lightweight `Card` data object constructed from the current `element` and `value` of this `CardScene`.
+
+<ResponseField name="return" type="Card">
+  A new `Card(element, value)` instance. Use this whenever you need to pass card data to a system that should not hold a reference to the scene node (e.g., saving state, evaluating card play logic).
+</ResponseField>
+
+```gdscript
+var data: Card = card_scene.get_abstract_card()
+# data.element and data.value are now safe to store or serialize
+```
+
+## Card inner class
+
+The `Card` inner class is a pure data container with no scene dependencies.
+
+```gdscript
+# Defined inside CardScene
+func _init(new_element: GameConstants.Elements, new_value: int)
+var element: GameConstants.Elements
+var value: int  # setter: if v < 0 or v > 10, value = 0
+```
+
+<ResponseField name="element" type="GameConstants.Elements" required>
+  The elemental type. One of: `AIR`, `EARTH`, `ENERGY`, `FIRE`, `WATER`. See [Elements](/mechanics/elements).
+</ResponseField>
+
+<ResponseField name="value" type="int" required>
+  Power level of the card. The setter enforces the range `0..10`: any value below `0` or above `10` is stored as `0`, effectively marking the card as invalid.
+</ResponseField>
+
+<Note>
+  The `Card` inner class intentionally holds no reference to its parent `CardScene`. This means you can create `Card` objects freely in game logic, AI evaluation, or deck management without touching the scene tree.
+</Note>
+
+## CardsList resource
+
+`CardsList` is a Godot `Resource` that maps every valid `(element, value)` combination to a `Texture2D`, plus a `placeholder` texture for face-down cards. `CardScene` uses it internally in `_update_sprite()` to look up the correct texture whenever `element`, `value`, `hide_card`, or `disable_card` changes.
+
+You configure `CardsList` in the Godot Inspector by assigning it to the `cards_list` exported property on a `CardScene` node.
+
+## Visual animations
+
+`CardScene` runs three distinct animations to give cards a living, tactile feel.
+
+<AccordionGroup>
+  <Accordion title="Ondulation — continuous idle wave" defaultOpen={false}>
+    Cards gently bob up and down while idle using a sine wave computed in `_physics_process`.
+
+    | Constant | Value | Effect |
+    |----------|-------|--------|
+    | `ONDULAION_SPEED` | `3.5` | Frequency of the wave cycle |
+    | `ONDULAION_STRENGHT` | `2` | Pixel amplitude of the vertical movement |
+
+    <Note>
+      These constant names contain typos in the source (`ONDULAION` instead of `ONDULATION`, `STRENGHT` instead of `STRENGTH`). Use the spellings exactly as shown — they match `card.gd` as written.
+    </Note>
+
+    The animation runs continuously as long as the card is in the scene tree. It does not require any explicit start call.
+  </Accordion>
+
+  <Accordion title="Hover — cursor-over feedback" defaultOpen={false}>
+    When the cursor enters the card, the card grows taller (`height * 1.5`) and shifts upward; its color tints to a dim gray. When the cursor exits, both effects reverse.
+
+    | Constant | Value |
+    |----------|-------|
+    | `HOVER_TIME` | `0.2s` |
+
+    The resize and color change are tweened over `HOVER_TIME` for a smooth feel. The hover animation is suppressed if `disable_card` is `true`.
+  </Accordion>
+
+  <Accordion title="Flip — face-up / face-down transition" defaultOpen={false}>
+    Triggered when `hide_card` changes. The flip uses a two-phase scale animation:
+
+    <Steps>
+      <Step title="Scale to zero">
+        `scale.x` animates from `1.0` to `0.0` over `ROTATION_TIME` (0.15 s), making the card appear to rotate edge-on.
+      </Step>
+      <Step title="Swap texture">
+        While `scale.x` is at zero, `_update_sprite()` swaps the texture — either to the `placeholder` (face-down) or to the `(element, value)` texture (face-up).
+      </Step>
+      <Step title="Scale back">
+        `scale.x` animates from `0.0` back to `1.0` over `ROTATION_TIME`, completing the flip.
+      </Step>
+    </Steps>
+
+    | Constant | Value |
+    |----------|-------|
+    | `ROTATION_TIME` | `15` (frames, set as `015` in source) |
+
+    <Note>
+      `ROTATION_TIME` is defined as `const ROTATION_TIME := 015` in `card.gd`. In GDScript 4, this is the integer `15` — not `0.15` seconds. The flip animation duration is governed by how Godot's `Tween` interprets this value with the physics framerate.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## Common patterns
+
+<Tabs>
+  <Tab title="Spawn and configure a card">
+    ```gdscript
+    var card_scene: CardScene = preload("res://assets/cards/card.tscn").instantiate()
+    # Set cards_list first so _update_sprite() can load textures
+    card_scene.cards_list = preload("res://assets/cards/cards_list.tres")
+    card_scene.set_properties({
+        "element": GameConstants.Elements.WATER,
+        "value": 5
+    })
+    hand_container.add_child(card_scene)
+    card_scene.card_selected.connect(_on_card_selected)
+    ```
+  </Tab>
+  <Tab title="Reveal a face-down card">
+    ```gdscript
+    # Card was spawned hidden; reveal it
+    card_scene.hide_card = false  # triggers _flip_card() animation automatically
+    ```
+  </Tab>
+  <Tab title="Extract data for game logic">
+    ```gdscript
+    # Get a lightweight Card to pass into evaluation logic
+    var card_data: Card = card_scene.get_abstract_card()
+    battle_manager.evaluate_play(card_data)
+    ```
+  </Tab>
+</Tabs>
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Cards mechanics" icon="cards-blank" href="/mechanics/cards">
+    Player-facing rules: how elements interact, card values, and scoring.
+  </Card>
+  <Card title="Elements" icon="fire" href="/mechanics/elements">
+    The five elemental types and how they affect card interactions.
+  </Card>
+  <Card title="BattleManager" icon="swords" href="/dev/battle-manager">
+    How `BattleManager` populates player hands and connects `deck_updated`.
+  </Card>
+  <Card title="Battle state machine" icon="diagram-project" href="/dev/battle-state-machine">
+    The state that processes card plays and passes `Card` data to the Referee.
+  </Card>
+</CardGroup>

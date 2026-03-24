@@ -1,97 +1,54 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Beast Card Clash"
+description: "A turn-based collectible card strategy game inspired by Colombian biodiversity and the Universidad Nacional de Colombia."
 ---
 
-## Setting up
+**Beast Card Clash** is a turn-based collectible card strategy game built in Godot 4. Players command a Colombian native animal, build a deck of elemental cards, roll a 3D dice to move across the board, and outplay up to three opponents before the Referee resolves the round.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Set up the project and play your first match in minutes
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Game mechanics" icon="cards-blank" href="/mechanics/cards">
+    Cards, elements, battle flow, and characters
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Installation guide" icon="download" href="/guides/installation">
+    Full setup walkthrough for Windows, Linux, and macOS
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Developer guide" icon="code" href="/dev/overview">
+    Architecture, autoloads, state machine, and contributing
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Key features
 
-Everything you need to create world-class documentation.
+<CardGroup cols={2}>
+  <Card title="Elemental card system" icon="fire">
+    Every card carries an element — Air, Earth, Energy, Fire, or Water — and a value from 1 to 10.
+  </Card>
+  <Card title="Colombian wildlife" icon="paw">
+    Play as a Bear, Condor, Chameleon, or Frog with skins drawn from real Colombian species.
+  </Card>
+  <Card title="UNAL faculty teams" icon="graduation-cap">
+    Nine teams inspired by the faculties of the Universidad Nacional de Colombia.
+  </Card>
+  <Card title="3D dice rolling" icon="dice">
+    An interactive 3D dice determines which board positions are valid each turn.
+  </Card>
+  <Card title="AI bot opponents" icon="robot">
+    Battle 1–3 AI bots with randomly generated decks in every session.
+  </Card>
+  <Card title="Five-phase state machine" icon="diagram-project">
+    Start → Loop → Turn → Referee → End governs every match from setup to results.
+  </Card>
+</CardGroup>
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Built with
 
-## Need inspiration?
+- **Godot 4.6** — engine, scene tree, signals, and UI nodes
+- **GDScript** — primary language for all gameplay logic and autoloads
+- **C#** — select systems via optional .NET 8 integration
+- **GDShader** — custom visual effects
+- **Dialogue Manager** — third-party plugin for in-game narrative sequences
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+Beast Card Clash is released under the [MIT License](https://github.com/Andresit1524/beast_card_clash/blob/main/LICENSE) and developed by **Osito y Co.**

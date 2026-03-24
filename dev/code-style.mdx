@@ -1,0 +1,238 @@
+---
+title: "Code style"
+description: "Naming conventions and code organization standards for Beast Card Clash."
+---
+
+Consistent code style makes it easier to read, review, and maintain the project. Follow these rules whether you're writing new code or editing existing files.
+
+## Bilingual policy
+
+Beast Card Clash enforces a strict bilingual split:
+
+| What | Language |
+|------|----------|
+| Code (identifiers, variables, functions, class names) | English |
+| Comments | Spanish |
+| Documentation strings | Spanish |
+| Commit messages | Spanish or English |
+
+```gdscript
+# Configura el jugador humano con los datos guardados en PlayerStats
+func setup_player() -> void:
+    player = Player.new(PlayerStats.player_name, PlayerStats.team, false)
+    player.create_deck()
+    players.append(player)
+```
+
+<Note>
+  C# follows its own standard conventions (Microsoft's C# coding guidelines). The rules below apply primarily to GDScript.
+</Note>
+
+## Naming conventions
+
+### Variables and functions
+
+Use `snake_case` for all variables, function names, and parameters.
+
+```gdscript
+# Correcto
+var player_name: String
+var battle_ui: Control
+var max_players: int = 4
+
+func get_current_player() -> Player:
+    pass
+
+func apply_card_effect(card: Card, target: Character) -> void:
+    pass
+```
+
+```gdscript
+# Incorrecto
+var playerName: String       # camelCase — not allowed
+var MaxPlayers: int          # PascalCase — reserved for types
+func GetCurrentPlayer():     # PascalCase — not allowed for functions
+    pass
+```
+
+### Classes and types
+
+Use `PascalCase` for class names and type identifiers.
+
+```gdscript
+class_name BattleManager
+class_name CardScene
+class_name BattleState
+```
+
+### Constants
+
+Use `SCREAMING_SNAKE_CASE` for constants.
+
+```gdscript
+const MAX_CARD_VAlUE: int = 10   # Note: typo in source ("VAlUE" not "VALUE")
+const ONDULAION_SPEED := 3.5     # Note: typo in source ("ONDULAION" not "ONDULATION")
+const MAX_PLAYERS := 4
+```
+
+### Enums
+
+Enum type names use `PascalCase`. Enum values use `SCREAMING_SNAKE_CASE`.
+
+```gdscript
+enum Elements { FIRE, WATER, EARTH, AIR, ENERGY }
+enum Teams { ADN, ACETILES, PHOTO_AGROS, PLUMA_DORADA }
+enum BattlePhase { START, LOOP, TURN, REFEREE, END }
+```
+
+Access enum values with the type name:
+
+```gdscript
+var current_element: Elements = Elements.FIRE
+var player_team: Teams = Teams.ADN
+```
+
+### Summary table
+
+| Identifier type | Convention | Example |
+|----------------|------------|---------|
+| Variable | `snake_case` | `player_name`, `battle_ui` |
+| Function | `snake_case` | `get_current_player()` |
+| Parameter | `snake_case` | `card: Card`, `target: Character` |
+| Class / type | `PascalCase` | `BattleManager`, `CardScene` |
+| Constant | `SCREAMING_SNAKE_CASE` | `MAX_CARD_VALUE`, `ONDULATION_SPEED` |
+| Enum (name) | `PascalCase` | `Elements`, `Teams` |
+| Enum (value) | `SCREAMING_SNAKE_CASE` | `Elements.FIRE`, `Teams.ADN` |
+
+## File and scene naming
+
+| What | Convention | Example |
+|------|------------|---------|
+| GDScript files | `snake_case.gd` | `battle_manager.gd`, `player_stats.gd` |
+| Scene files | `snake_case.tscn` | `battle_scene.tscn`, `cards_list.tscn` |
+| C# files | `PascalCase.cs` | `BattleManager.cs` |
+| Scene nodes | `PascalCase` | `StateMachine`, `BattleUI`, `Dice` |
+
+<Warning>
+  Scene node names and script/file names follow **different** conventions. A node in the scene tree is `PascalCase` (e.g., `BattleUI`), but its associated file is `snake_case` (e.g., `battle_ui.tscn`).
+</Warning>
+
+## Project folder structure
+
+The project uses color-coded folders in the Godot editor to communicate the role of each directory at a glance.
+
+<Tree>
+  <Tree.Folder name="beast_card_clash" defaultOpen>
+    <Tree.Folder name="addons" defaultOpen>
+    </Tree.Folder>
+    <Tree.Folder name="assets" defaultOpen>
+      <Tree.Folder name="battle" defaultOpen></Tree.Folder>
+      <Tree.Folder name="cards" defaultOpen></Tree.Folder>
+      <Tree.Folder name="characters" defaultOpen></Tree.Folder>
+      <Tree.Folder name="elements" defaultOpen></Tree.Folder>
+      <Tree.Folder name="tests" defaultOpen></Tree.Folder>
+      <Tree.Folder name="ui" defaultOpen></Tree.Folder>
+    </Tree.Folder>
+    <Tree.Folder name="autoload" defaultOpen></Tree.Folder>
+    <Tree.Folder name=".vscode" defaultOpen></Tree.Folder>
+  </Tree.Folder>
+</Tree>
+
+| Folder | Color | Purpose |
+|--------|-------|---------|
+| `res://addons/` | Teal | Godot plugins and third-party tools |
+| `res://assets/` | Yellow | All game content: cards, characters, UI, music, shaders |
+| `res://assets/tests/` | Red | Test scenes and assets — not shipped in release builds |
+| `res://autoload/` | Blue | Singleton scripts loaded at startup (global state, managers) |
+
+<Tip>
+  The `autoload/` folder (blue) contains scripts that are always available globally — things like `MusicManager`, `FlagsManager`, and `SceneManager`. See the [autoloads reference](/dev/autoloads) for details.
+</Tip>
+
+## GDScript vs C#
+
+<Tabs>
+  <Tab title="GDScript">
+    GDScript is the primary language for Beast Card Clash. All rules on this page apply directly to GDScript files.
+
+    ```gdscript
+    class_name BattleManager
+    extends Node
+
+    const MAX_PLAYERS: int = 4
+
+    var current_turn: int = 0
+    var active_player: Player
+
+    enum BattlePhase { START, LOOP, TURN, REFEREE, END }
+
+    # Inicia una nueva ronda y notifica a los jugadores
+    func start_round() -> void:
+        current_turn += 1
+        emit_signal("round_started", current_turn)
+    ```
+  </Tab>
+  <Tab title="C#">
+    C# follows standard Microsoft C# conventions. PascalCase for public members, camelCase for private fields, and `_camelCase` for private fields by common convention.
+
+    ```csharp
+    public class BattleManager : Node
+    {
+        private const int MaxPlayers = 4;
+
+        private int _currentTurn = 0;
+        private Player _activePlayer;
+
+        // Inicia una nueva ronda y notifica a los jugadores
+        public void StartRound()
+        {
+            _currentTurn++;
+            EmitSignal(nameof(RoundStarted), _currentTurn);
+        }
+    }
+    ```
+
+    C# files are named in `PascalCase.cs` to match the class name.
+  </Tab>
+</Tabs>
+
+## Consistency checklist
+
+Before submitting a pull request, verify that your code follows these rules:
+
+<AccordionGroup>
+  <Accordion title="Language and comments">
+    - All identifiers (variables, functions, classes, files) are in English
+    - All inline comments are in Spanish
+    - Spelling is correct — double-check both English identifiers and Spanish comments
+  </Accordion>
+  <Accordion title="Naming conventions">
+    - Variables and functions use `snake_case`
+    - Classes and type names use `PascalCase`
+    - Constants use `SCREAMING_SNAKE_CASE`
+    - Enum names use `PascalCase`, enum values use `SCREAMING_SNAKE_CASE`
+    - Scene nodes use `PascalCase`
+    - Scene and script files use `snake_case`
+  </Accordion>
+  <Accordion title="File and scene organization">
+    - New scripts are placed in the appropriate `assets/` subfolder
+    - Global singletons belong in `autoload/`
+    - Test files go in `assets/tests/` and are not mixed with production assets
+    - The `.vscode/` directory has not been modified
+  </Accordion>
+  <Accordion title="C# specifics">
+    - C# files are named to match their class name (`BattleManager.cs` contains `class BattleManager`)
+    - C# follows Microsoft's standard C# coding guidelines, not GDScript conventions
+  </Accordion>
+</AccordionGroup>
+
+## Related pages
+
+<Columns cols={2}>
+  <Card title="Contributing" icon="git-pull-request" href="/dev/contributing">
+    Branch naming, commit guidelines, and the pull request workflow.
+  </Card>
+  <Card title="Architecture overview" icon="diagram-project" href="/dev/overview">
+    How the project is structured and how systems connect.
+  </Card>
+</Columns>

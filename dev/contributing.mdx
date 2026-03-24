@@ -1,0 +1,133 @@
+---
+title: "Contributing"
+description: "How to contribute to Beast Card Clash — from setup to submitting a pull request."
+---
+
+Beast Card Clash uses a **direct collaboration model**: contributors are added directly to the repository rather than forking it. This keeps the workflow simple and lets collaborators create branches without friction.
+
+<Note>
+  To request contributor access, contact **@Andresit1524** on GitHub. Once you're added, you can clone the repo and push branches directly.
+</Note>
+
+## Prerequisites
+
+Before you start, make sure you have the following installed:
+
+<Columns cols={2}>
+  <Card title="Godot 4.6" icon="gamepad-2">
+    The engine used to build and run Beast Card Clash. Godot is updated whenever possible within the 4.x series. Download from [godotengine.org](https://godotengine.org).
+  </Card>
+  <Card title="Git + GitHub account" icon="git-branch">
+    You need Git on your machine and a GitHub account to request access and push branches.
+  </Card>
+  <Card title="Godot export templates" icon="package">
+    Required to export the game. Export settings are already included in the project — you only need to install the templates.
+  </Card>
+  <Card title="Code editor" icon="code">
+    Visual Studio Code is recommended. JetBrains Rider also works well. See the workspace setup section below.
+  </Card>
+</Columns>
+
+**Optional:**
+- **.NET SDK 8 or later** — only needed if you work on C# scripts.
+- **Godot 4.6 .NET build** — required alongside the .NET SDK for C# support.
+
+## Cloning the repository
+
+Once you have contributor access, clone the repository to your machine:
+
+```bash
+git clone https://github.com/Andresit1524/beast_card_clash
+cd beast_card_clash
+```
+
+Then open the project folder in Godot 4 to let the engine generate its local configuration files (`.godot/`).
+
+## VS Code workspace setup
+
+If you use Visual Studio Code:
+
+<Steps>
+  <Step title="Install the godot-tools extension">
+    Search for **godot-tools** in the VS Code Extensions panel and install it. This gives you GDScript syntax highlighting, code completion, and debugger integration.
+  </Step>
+  <Step title="Open the project in Godot first">
+    Launch Godot and open the `beast_card_clash` project. Godot generates the `.godot/` folder with resource metadata that godot-tools relies on.
+  </Step>
+  <Step title="Use the shared .vscode/ config">
+    The repository includes a `.vscode/` directory with shared settings for formatting and editor behavior. Do not modify these files — they keep the experience consistent for all contributors.
+  </Step>
+</Steps>
+
+<Warning>
+  Do not edit or delete files inside `.vscode/`. Changing these settings affects every contributor who opens the project in VS Code.
+</Warning>
+
+## Git workflow
+
+Never work directly on `main`. All changes go through a branch and a pull request.
+
+<Steps>
+  <Step title="Create a new branch">
+    Use a descriptive branch name that reflects what you're working on:
+
+    ```bash
+    git checkout -b feature/new-card
+    ```
+
+    Follow the naming conventions:
+
+    | Prefix | When to use |
+    |--------|-------------|
+    | `feature/` | Adding new functionality |
+    | `fix/` | Fixing a bug |
+
+    Examples: `feature/water-element-card`, `fix/main-menu-crash`, `feature/dice-animation`
+  </Step>
+  <Step title="Make your changes">
+    Work on your feature or fix. Follow the [code style guidelines](/dev/code-style) for naming, language, and structure.
+  </Step>
+  <Step title="Stage and commit your changes">
+    ```bash
+    git add .
+    git commit -m "title of your commit"
+    ```
+
+    Write a short, descriptive commit title in the imperative mood. For example:
+    - `Add fire element card resource`
+    - `Fix crash when deck is empty on turn start`
+    - `Refactor BattleManager turn loop`
+  </Step>
+  <Step title="Push your branch">
+    ```bash
+    git push origin feature/your-branch-name
+    ```
+  </Step>
+  <Step title="Open a pull request">
+    Go to the [repository on GitHub](https://github.com/Andresit1524/beast_card_clash) and open a pull request from your branch into `main`. Give it a clear title and describe what changed and why.
+  </Step>
+</Steps>
+
+## Branch naming reference
+
+```
+feature/new-card          # Adding a new card type
+feature/dice-animation    # Adding a visual feature
+fix/main-menu-bug         # Fixing a specific bug
+fix/audio-loop-glitch     # Fixing an audio issue
+```
+
+<Tip>
+  Keep branch names lowercase and hyphen-separated. Avoid vague names like `fix/stuff` or `feature/update` — be specific enough that the purpose is clear from the name alone.
+</Tip>
+
+## Related pages
+
+<Columns cols={2}>
+  <Card title="Code style" icon="paintbrush" href="/dev/code-style">
+    Naming conventions, language rules, and file organization standards.
+  </Card>
+  <Card title="Architecture overview" icon="diagram-project" href="/dev/overview">
+    Project structure, folder layout, and system design.
+  </Card>
+</Columns>

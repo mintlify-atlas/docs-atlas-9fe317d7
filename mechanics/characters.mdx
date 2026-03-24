@@ -1,0 +1,187 @@
+---
+title: "Characters & Teams"
+description: "Choose your species, skin, and team in Beast Card Clash — four Colombian wildlife characters, multiple skins, and nine UNAL-inspired teams to represent."
+keywords: ["characters", "species", "skins", "teams", "bear", "condor", "chameleon", "frog", "UNAL"]
+---
+
+Before entering a battle, you choose a character: a Colombian native animal that represents you on the board. Each character belongs to a **species**, can wear a **skin**, and competes under one of nine **teams** inspired by the faculties of the Universidad Nacional de Colombia (UNAL).
+
+## Species
+
+There are four playable species, each drawn from Colombian native wildlife:
+
+```gdscript game_constants.gd
+enum Species {
+    BEAR,
+    CONDOR,
+    CHAMALEON,
+    FROG
+}
+```
+
+<Columns cols={2}>
+  <Card title="Bear" icon="paw" color="#8B6914">
+    **Oso** — Colombia is home to the spectacled bear (*Tremarctos ornatus*), the only bear species in South America. Sturdy and commanding, the Bear is a versatile choice for players who prefer resilience.
+  </Card>
+  <Card title="Condor" icon="bird" color="#6c6c6c">
+    **Cóndor** — The Andean condor (*Vultur gryphus*) is Colombia's national bird. Soaring and strategic, the Condor suits players who think ahead and play from above the fray.
+  </Card>
+  <Card title="Chameleon" icon="eye" color="#2ecc71">
+    **Camaleón** — Colombia's diverse forests shelter multiple chameleon relatives. Adaptive and deceptive, the Chameleon rewards players who like to keep opponents guessing.
+  </Card>
+  <Card title="Frog" icon="circle" color="#27ae60">
+    **Rana** — Colombia holds one of the highest frog diversities on Earth, including the iconic poison dart frog. Small but potent, the Frog suits aggressive, high-risk play styles.
+  </Card>
+</Columns>
+
+## Skins
+
+Each species has one or more skins that change the character's visual appearance. Skins are purely cosmetic — they do not affect gameplay or card draws.
+
+```gdscript game_constants.gd
+const SKINS: Dictionary[Species, PackedStringArray] = {
+    Species.BEAR:      ["base", "andean", "black", "grizzly", "panda", "polar"],
+    Species.CHAMALEON: ["base"],
+    Species.CONDOR:    ["base"],
+    Species.FROG:      ["base", "green", "perez"]
+}
+```
+
+<Tabs>
+  <Tab title="Bear (6 skins)">
+    The Bear has the most skin variety, reflecting the global diversity of bear species:
+
+    | Skin | Description |
+    |---|---|
+    | `base` | Default brown bear appearance |
+    | `andean` | Inspired by the spectacled (Andean) bear native to Colombia |
+    | `black` | Black bear variant |
+    | `grizzly` | North American grizzly variant |
+    | `panda` | Giant panda variant |
+    | `polar` | Polar bear variant |
+  </Tab>
+  <Tab title="Frog (3 skins)">
+    The Frog has three skins, two of which reference real Colombian species:
+
+    | Skin | Description |
+    |---|---|
+    | `base` | Default green frog appearance |
+    | `green` | Bright green variant |
+    | `perez` | Inspired by Perez's frog (*Pelophylax perezi*) |
+  </Tab>
+  <Tab title="Condor (1 skin)">
+    | Skin | Description |
+    |---|---|
+    | `base` | Classic Andean condor with black plumage and white ruff |
+  </Tab>
+  <Tab title="Chameleon (1 skin)">
+    | Skin | Description |
+    |---|---|
+    | `base` | Default chameleon appearance |
+  </Tab>
+</Tabs>
+
+<Note>
+Condor and Chameleon each have only a `base` skin in the current release. Additional skins for these species may be added in future updates.
+</Note>
+
+## Teams
+
+Nine teams are available, each named after or inspired by a faculty, group, or community connected to UNAL:
+
+```gdscript game_constants.gd
+enum Teams {
+    NO_TEAM,
+    ACETILES,
+    ADN,
+    INGENIOSOS_ELEMENTALES,
+    PHOTO_AGROS,
+    PLUMA_DORADA,
+    RPC_TEAM,
+    REAL_PINCEL,
+    VA_GAMES,
+    ZOOTECNICOS
+}
+```
+
+<AccordionGroup>
+  <Accordion title="Acetiles">
+    A team with roots in UNAL's engineering and technical sciences communities. The name plays on "acetylene" — a nod to chemistry and materials science.
+  </Accordion>
+  <Accordion title="ADN">
+    Named after DNA (ADN in Spanish), this team connects to UNAL's biological and life sciences faculties. Science-forward and precise.
+  </Accordion>
+  <Accordion title="Ingeniosos Elementales">
+    "Clever Elementals" — this team celebrates the elemental card system itself and the creativity of UNAL's engineering faculty students.
+  </Accordion>
+  <Accordion title="Photo Agros">
+    A team tied to agricultural sciences and photosynthesis, representing UNAL's agronomy and environmental programs.
+  </Accordion>
+  <Accordion title="Pluma Dorada">
+    "Golden Feather" — a poetic team name honoring the arts, humanities, and the Condor's golden plumage. Represents UNAL's arts and humanities tradition.
+  </Accordion>
+  <Accordion title="RPC Team">
+    Inspired by computing and systems engineering. RPC (Remote Procedure Call) is a nod to UNAL's systems and computer science programs.
+  </Accordion>
+  <Accordion title="Real Pincel">
+    "Royal Brush" — a team celebrating visual arts, design, and UNAL's fine arts faculty. Players who choose Real Pincel value creativity and expression.
+  </Accordion>
+  <Accordion title="VA Games">
+    A team dedicated to video game development and interactive media, directly representing the creative team behind Beast Card Clash.
+  </Accordion>
+  <Accordion title="Zootecnicos">
+    From UNAL's animal science and zootechnics program — fittingly, this team is all about the animals. A natural choice for players who lean into the wildlife theme.
+  </Accordion>
+</AccordionGroup>
+
+## Player defaults
+
+When a new session starts, `PlayerStats` (an autoload) holds your current character configuration:
+
+```gdscript player_stats.gd
+# PlayerStats autoload — persists across scenes
+var player_name: String = "Osorio"
+var team: GameConstants.Teams   = GameConstants.Teams.NO_TEAM
+var species: GameConstants.Species = GameConstants.Species.BEAR
+var skin: String = GameConstants.SKINS[species][0]  # "base"
+```
+
+The default character is a Bear with the `base` skin and no team assigned. You can change all of these on the character selector screen before entering a match.
+
+## Selecting your character
+
+<Steps>
+  <Step title="Open the character selector">
+    From the main menu, navigate to the character selector screen.
+  </Step>
+  <Step title="Choose your species">
+    Select one of the four species: Bear, Condor, Chameleon, or Frog. The available skins update automatically based on your selection.
+  </Step>
+  <Step title="Choose your skin">
+    Pick a skin from those available for your species. Your character preview updates in real time.
+  </Step>
+  <Step title="Choose your team">
+    Select one of the nine teams (or leave it as `NO_TEAM`). Your team is displayed on the results screen at the end of a match.
+  </Step>
+  <Step title="Enter the battle">
+    Confirm your selection and start the match. Your choices are saved to `PlayerStats` and persist for the session.
+  </Step>
+</Steps>
+
+<Tip>
+Your team choice and skin are purely cosmetic — they do not grant stat bonuses or affect which cards appear in your deck. Focus on your deck-building strategy and elemental composition to gain a competitive edge.
+</Tip>
+
+## Related pages
+
+<CardGroup cols={3}>
+  <Card title="Elements" icon="fire" href="/mechanics/elements">
+    See how the five elemental types connect to Colombian biodiversity and UNAL themes.
+  </Card>
+  <Card title="Battle" icon="swords" href="/mechanics/battle">
+    Learn the full battle flow and how your character moves across the board each turn.
+  </Card>
+  <Card title="Cards" icon="cards-blank" href="/mechanics/cards">
+    Understand the cards in your deck and how to play them effectively.
+  </Card>
+</CardGroup>

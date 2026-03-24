@@ -1,0 +1,180 @@
+---
+title: "MusicManager"
+description: "Background music management and playback control."
+keywords: ["music", "audio", "AudioStreamPlayer", "playlist", "autoload", "MusicManager"]
+---
+
+`MusicManager` is an autoload singleton that extends `AudioStreamPlayer`. It centralizes all background music selection and playback state, so every part of the game changes or pauses music through a single, consistent API rather than manipulating audio nodes directly.
+
+<Note>
+  Because `MusicManager` extends `AudioStreamPlayer`, it **is** the audio player — it is not a wrapper around one. The node itself plays the stream.
+</Note>
+
+## Class overview
+
+```gdscript music_manager.gd
+# extends AudioStreamPlayer (Autoload singleton)
+```
+
+At startup, `MusicManager` loads a `Playlist` resource (`playlist.tres`) that maps music track names to `AudioStream` objects.
+
+## Initialization
+
+```gdscript
+func _ready():
+    _playlist.expected_type = TYPE_OBJECT
+    _playlist.check_item_types()
+```
+
+Before any music plays, `_ready()` validates that every entry in `playlist.tres` is a proper `Object` (a loaded `AudioStream`). Type mismatches are reported immediately at startup rather than at the moment a track is first requested.
+
+## API reference
+
+### `play_music(music_name: String) -> void`
+
+Loads the named track from the playlist and starts playback immediately, replacing any currently playing stream.
+
+<ParamField path="music_name" type="String" required>
+  The track name as registered in `playlist.tres`. Case-sensitive. If the key is not found, `_playlist.get_item()` raises an error.
+</ParamField>
+
+```gdscript
+func play_music(music_name: String) -> void:
+    stream = _playlist.get_item(music_name)
+    play()
+```
+
+### `switch_music_playing(on = null) -> void`
+
+Toggles, pauses, or resumes playback depending on the argument passed.
+
+<ParamField path="on" type="bool | null" default="null">
+  Controls the pause state:
+  - `null` (default) — toggles `stream_paused`
+  - `true` — pauses playback
+  - `false` — resumes playback
+
+  Passing a non-boolean, non-null value calls `push_error` and returns without changing state.
+</ParamField>
+
+```gdscript
+func switch_music_playing(on = null) -> void:
+    if on == null:
+        stream_paused = not stream_paused
+        return
+    if not (on is bool):
+        push_error("Tipo de dato incorrecto en MusicManager. Se espera un valor booleano")
+    stream_paused = on
+    return
+```
+
+<Columns cols={3}>
+  <Card title="Toggle" icon="repeat">
+    ```gdscript
+    MusicManager.switch_music_playing()
+    ```
+    Flips the current pause state.
+  </Card>
+  <Card title="Pause" icon="pause">
+    ```gdscript
+    MusicManager.switch_music_playing(true)
+    ```
+    Pauses without unloading the stream.
+  </Card>
+  <Card title="Resume" icon="play">
+    ```gdscript
+    MusicManager.switch_music_playing(false)
+    ```
+    Resumes from where it paused.
+  </Card>
+</Columns>
+
+## Usage patterns
+
+<Tabs>
+  <Tab title="Play music on scene load">
+    The most common pattern: start the appropriate track in `_ready()` of the scene's root node.
+
+    ```gdscript
+    # res://assets/battle/battle.gd (or any scene root)
+    # "battle" is the key in playlist.tres mapped to battle.ogg
+    func _ready() -> void:
+        MusicManager.play_music("battle")
+    ```
+  </Tab>
+  <Tab title="Pause on menu open">
+    Pause background music when an overlay menu appears, then resume when it closes.
+
+    ```gdscript
+    func _on_pause_menu_opened() -> void:
+        MusicManager.switch_music_playing(true)   # pause
+
+    func _on_pause_menu_closed() -> void:
+        MusicManager.switch_music_playing(false)  # resume
+    ```
+  </Tab>
+  <Tab title="Switch tracks on scene change">
+    Call `play_music` right after `SceneManager.change_to_scene` to match music to the new scene. Since `SceneManager` and `MusicManager` are both autoloads, neither is freed during a scene transition.
+
+    ```gdscript
+    func _on_battle_ended() -> void:
+        SceneManager.change_to_scene("main_menu")
+        MusicManager.play_music("menu_final")  # menu_final.ogg
+    ```
+  </Tab>
+  <Tab title="Toggle mute button">
+    Wire a UI checkbox or mute button directly to `switch_music_playing()` with no arguments.
+
+    ```gdscript
+    func _on_mute_button_pressed() -> void:
+        MusicManager.switch_music_playing()  # toggle
+    ```
+  </Tab>
+</Tabs>
+
+## The Playlist resource
+
+All track names are defined in `playlist.tres`. Open this file in the Godot Inspector to view, add, or rename tracks.
+
+<Note>
+  Track names in `playlist.tres` are the only source of truth for valid `play_music` arguments. Check the Inspector to see which names are registered before calling `play_music`.
+</Note>
+
+### Adding a new track
+
+<Steps>
+  <Step title="Import your audio file">
+    Add the audio file (`.ogg`, `.mp3`, or `.wav`) to the project's filesystem under `res://assets/music/`.
+  </Step>
+  <Step title="Open playlist.tres in the Inspector">
+    Locate `playlist.tres` in the FileSystem dock and open it. You will see the existing name → AudioStream entries.
+  </Step>
+  <Step title="Add a new entry">
+    Add a new key-value pair: the key is your track name string (e.g., `"credits_theme"`), and the value is the imported audio file.
+  </Step>
+  <Step title="Verify at startup">
+    Run the project. If `check_item_types()` logs no errors in `_ready()`, your track is correctly registered.
+  </Step>
+  <Step title="Play the new track">
+    ```gdscript
+    MusicManager.play_music("credits_theme")
+    ```
+  </Step>
+</Steps>
+
+## Related pages
+
+<CardGroup cols={2}>
+  <Card title="Autoloads" icon="bolt" href="/dev/autoloads">
+    Overview of all autoload singletons and initialization order.
+  </Card>
+  <Card title="SceneManager" icon="shuffle" href="/dev/scene-manager">
+    Transition between scenes — call `play_music` after `change_to_scene`.
+  </Card>
+  <Card title="FlagsManager" icon="flag" href="/dev/flags-manager">
+    Use flags to determine which track to play (e.g., after tutorial completion).
+  </Card>
+  <Card title="Architecture overview" icon="sitemap" href="/dev/overview">
+    How autoloads fit into the overall project structure.
+  </Card>
+</CardGroup>
