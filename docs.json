@@ -26,31 +26,6 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
-        "groups": [
-          {
-            "group": "Introduction",
-            "pages": ["introduction", "quickstart"]
-          },
-          {
-            "group": "Game Mechanics",
-            "pages": [
-              "mechanics/cards",
-              "mechanics/elements",
-              "mechanics/battle",
-              "mechanics/characters"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/installation",
-              "guides/playing"
-            ]
-          }
-        ]
-      },
-      {
         "tab": "Developer Guide",
         "groups": [
           {
