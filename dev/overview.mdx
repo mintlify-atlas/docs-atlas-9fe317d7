@@ -1,150 +1,142 @@
 ---
 title: "Architecture overview"
-description: "High-level overview of the Beast Card Clash codebase structure and design patterns."
+description: "Una vista de reojo de la estructura del juego y sus patrones de diseño"
 keywords: ["architecture", "codebase", "godot", "gdscript", "structure", "design patterns"]
 ---
 
-Beast Card Clash is built in **Godot 4.6** with GDScript as the primary language. The codebase is organized around a small set of well-defined design patterns that keep game logic, UI, and data cleanly separated. This page gives you a map of the project so you know where everything lives before diving into individual systems.
+Beast Card Clash está desarrollado en Godot 4.6 con GDScript como lenguaje principal. El código está organizado en torno a un pequeño conjunto de patrones de diseño bien definidos que mantienen la lógica del juego, la interfaz de usuario y los datos claramente separados. Esta página te ofrece una visión general del proyecto para que sepas dónde se encuentra cada elemento antes de profundizar en los sistemas individuales.
 
-## Project structure
+## Estructura del proyecto
+
+La estructura del proyecto sigue un enfoque por **cercanía** en el cual las escenas se organizan en carpetas junto a sus recursos y los recursos compartidos se separan. Este enfoque es más sencillo de mantener y es recomendado por Godot para proyectos medianos a grandes.
 
 ```text
 beast_card_clash/
-├── addons/                    # Godot plugins
-│   ├── dialogue_manager/      # Third-party dialogue system
-│   └── vector_display_2d/     # Vector rendering helper
+├── addons/                    # Plugins
+│   ├── dialogue_manager/
+│   └── vector_display_2d/
 ├── assets/
-│   ├── battle/                # Battle scene, states, UI, dice, rocks, player
-│   ├── cards/                 # Card scene, CardsList resource
-│   ├── character_selector/    # Character, skin, and team selection UI
-│   ├── characters/            # Character models
-│   ├── dialogues/             # .dialogue files (begin, lose, pregame, win)
-│   ├── elements/              # Element assets
-│   ├── fonts/
-│   ├── models/
-│   ├── music/
-│   ├── shaders/               # GDShader visual effects
-│   ├── teams/                 # Team data resources
-│   ├── tests/                 # Test assets
+│   ├── battle/                # Escenario de batalla
+│   ├── cards/                 # Cartas
+│   ├── character_selector/    # Selector de personajes
+│   ├── dialogues/             # Archivos de diálogos
+│   ├── elements/              # Elementos (íconos)
+│   ├── fonts/                 # Fuentes
+│   ├── music/                 # Banda sonora y efectos de sonido
+│   ├── shaders/               # Shaders
+│   ├── teams/                 # Información sobre los equipos
 │   └── ui/                    # Start menu, tutorial, credits, back button
-├── autoload/
-│   ├── game_constants.gd      # GameConstants singleton
-│   ├── scene_manager.gd       # SceneManager singleton
-│   ├── music_manager.gd       # MusicManager singleton
-│   ├── flags_manager.gd       # FlagsManager singleton
-│   ├── player_stats.gd        # PlayerStats singleton
-│   └── resources/             # AutoloadResource, Flags, Playlist scripts
-├── .ai_docs/                  # AI-generated per-file documentation
-├── .docs/                     # Hand-written docs and diagrams
+├── autoload/                   
+├── tests/                     # Elementos de prueba
+├── .docs/                     # Documentación a mano
 ├── project.godot
 ├── CONTRIBUTING.md
 └── README.md
 ```
 
-## Tech stack
+## Herramientas
 
 <Columns cols={2}>
-  <Card title="Godot 4.6" icon="gamepad-2">
-    The game engine. Provides the scene tree, signals, physics, and built-in UI
-    nodes that everything else builds on.
+  <Card title="Godot 4.6" color="#3b51f3" icon="robot">
+    Usamos Godot 4 lo más actualizado posible, aunque es probable que no se pueda migrar al 5.
   </Card>
-  <Card title="GDScript" icon="code">
-    Primary language for all gameplay logic, autoloads, UI scripts, and state
-    machine states (390 KB of source).
+
+  <Card title="GDScript" color="#2a98ff" icon="code">
+    Lenguaje principal para toda la lógica del juego. Te recomendamos seguirlo usando para cualquier adición.
   </Card>
-  <Card title="C#" icon="hashtag">
-    Used for select systems via optional .NET 8 integration (29 KB). Not required
-    to run the game.
+
+  <Card title="C#" color="#168128" icon="hashtag">
+    Para addons que contienen C# y probablemente para procesamiento de datos en el futuro. Basado en .NET 8 o superior.
   </Card>
-  <Card title="GDShader" icon="wand-magic-sparkles">
-    Custom shaders for visual effects in `assets/shaders/`.
+
+  <Card title="GDShader" color="#28ffbf" icon="cube">
+    Efectos visuales varios para el juego. Todos en `assets/shaders/`.
   </Card>
-  <Card title="Dialogue Manager" icon="message-square">
-    Third-party Godot plugin (`addons/dialogue_manager`) that drives all
-    in-game narrative and cutscenes.
-  </Card>
-  <Card title="Python & Shell" icon="terminal">
-    Tooling and automation scripts. Not part of the game runtime.
+
+  <Card title="Dialogue Manager" color="#a33eea" icon="thought-bubble">
+    Plugin externo de Nathan Hoad (`addons/dialogue_manager`) elegido para los diálogos del juego.
   </Card>
 </Columns>
 
-## Core design patterns
+## Elecciones de diseño
 
-### Autoloads as singletons
+### Autoloads como singletons
 
-Godot autoloads are nodes that Godot instantiates once and makes available to every other scene by name. Beast Card Clash uses six autoloads to expose global state and services without coupling scenes to each other.
+Los autoloads de Godot son nodos que Godot instancia una sola vez y pone a disposición de todas las demás escenas por su nombre. Beast Card Clash los usa para exponer el estado global y los servicios sin que las escenas dependan unas de otras.
 
 ```gdscript
-# Any script can access autoloads directly by their registered name
+# Accesibles donde sea
 var team := GameConstants.Teams.ADN
 PlayerStats.skin = "andean"
 SceneManager.change_to_scene("battle")
 MusicManager.play_music("battle_theme")
 ```
 
-See [Autoloads & Singletons](/dev/autoloads) for the full API reference of each autoload.
+Mira [Autoloads & Singletons](/dev/autoloads) para conocer la API completa de cada autoload.
 
-### State machine for battle flow
+### Flujo de batalla
 
-The battle scene is driven by a five-phase state machine: **Start → Loop → Turn → Referee → End**. Each phase is a separate GDScript class that extends `BattleState`, which itself extends a generic `BaseState`. The `BattleManager` node owns the active state and drives transitions.
+Las batallas se controlan con una máquina de estados de cinco pasos:
 
-This pattern keeps each phase's logic isolated and easy to extend without touching the others. See [Battle state machine](/dev/battle-state-machine) for the full diagram and state descriptions.
+1. `Start`: Inicio de batalla
+2. `Loop`: Ciclo de turnos para los bots
+3. `Turn`: Turno del humano
+4. `Referee`: Evaluación de las jugadas antes de acabar turno
+5. `End`: Fin del juego
 
-### Resource-based data
+Cada una es una clase GDScript que extiende `BattleState` y a su vez `BaseState`. Un nodo `BattleManager` gestiona todos los estados.
 
-Game data (cards, teams, playlists, flags, scenes) is stored as Godot `Resource` files rather than hardcoded in scripts. Autoloads load these resources at startup and expose typed accessors. This makes it straightforward to add new cards, teams, or tracks without modifying logic code.
+Esto aisla la lógica de cada estado y lo permite extender de maneras más sencillas. Mira [Battle state machine](/dev/battle-state-machine) para más detalles del sistema.
 
-```gdscript
-# Example: AutoloadResource pattern used by MusicManager and SceneManager
-func get_item(name: String) -> Resource:
-    return _items[name]
-```
+### Uso de Resource
 
-### Signal-based UI updates
+Los datos del juego se almacenan en recursos de Godot (`Resource`). Con los autoloads se pueden acceder a algunos. Esto mantiene un desacoplamiento más adecuado.
 
-UI nodes do not poll game state each frame. Instead, game logic emits Godot signals and UI nodes connect to them. This keeps the battle scene responsive and avoids tight coupling between the state machine and the HUD.
+### Actualizaciones de UI basadas en señales
 
-## How scenes connect
+Como es típico en Godot, las interfaces de usuario se basan en señales para enviarse información entre sí. Aunque debemos mejorar la forma en la que viaja la información, que actualmente es un poco enredada.
 
-The game's scene flow is linear and controlled entirely through `SceneManager`:
+## Estructura de las escenas
+
+Gestionado con `SceneManager`, las escenas siguientes se conectan y fluyen entre sí:
 
 ```mermaid
-flowchart LR
-    StartMenu([Start menu]) --> CharacterSelector([Character selector])
-    CharacterSelector --> Battle([Battle scene])
-    Battle --> EndScreen([End screen])
-    EndScreen --> StartMenu
+flowchart
+    StartMenu([Menú de inicio]) --> CharacterSelector([Selector de personajes])
+    CharacterSelector --> Battle([Escena de batalla])
+    Battle --> StartMenu
 ```
 
-1. **Start menu** — the entry point. Launches character/team selection or shows credits and the tutorial.
-2. **Character selector** — the player picks a team, species, and skin. This writes to `PlayerStats`.
-3. **Battle scene** — the core gameplay loop, driven by the battle state machine. `BattleStart` calls `setup_player()`, `setup_bots()`, `setup_ui()`, and `setup_world()` on the `BattleManager`.
-4. **End screen** — shown from the `BattleEnd` state after ranking is determined. The back button returns to the start menu via `SceneManager`.
+1. **Menú de inicio:** El punto de inicio.
+2. **Selector de personajes:** El jugador elige especie, color, equipo y nombre. Todo se escribe en`PlayerStats`.
+3. **Escena de batalla:** Con toda la lógica principal. Es la única parte más o menos completa del juego.
 
-<Note>
-  All scene transitions use `SceneManager.change_to_scene(name)`. You should never
-  call `get_tree().change_scene_to_*` directly in scene scripts.
-</Note>
+También hay otros menús como los créditos, tutorial o fin de juego (en Batalla)
 
-## Explore further
+## Ver más
 
 <Columns cols={3}>
-  <Card title="Autoloads & singletons" icon="database" href="/dev/autoloads">
-    Full API reference for all six globally accessible autoload nodes.
+  <Card title="Autoloads y singletons" icon="database" href="/dev/autoloads">
+    Referencia de uso de los autoloads del juego.
   </Card>
-  <Card title="Battle state machine" icon="diagram-project" href="/dev/battle-state-machine">
-    How the five-phase state machine controls every match from start to finish.
+
+  <Card title="Batalla" icon="diagram-project" href="/dev/battle-state-machine">
+    Como funciona la SFM de batalla.
   </Card>
-  <Card title="Battle manager" icon="sword" href="/dev/battle-manager">
-    The node that owns and drives the state machine during a battle.
+
+  <Card title="BattleManager" icon="sword" href="/dev/battle-manager">
+    El nodo principal de la batalla.
   </Card>
-  <Card title="Card system" icon="cards-blank" href="/dev/card-system">
-    How cards are defined, stored, and played.
+
+  <Card title="Sistema de cartas" icon="cards-blank" href="/dev/card-system">
+    ¿Cómo funcionan las cartas?
   </Card>
-  <Card title="Battle mechanics" icon="shield" href="/mechanics/battle">
-    Player-facing rules for how battles resolve.
+
+  <Card title="Mecánicas" icon="shield" href="/mechanics/battle">
+    Las reglas del juego, explicadas de manera sencilla.
   </Card>
-  <Card title="Contributing" icon="git-pull-request" href="/dev/contributing">
-    How to set up your dev environment and submit changes.
+
+  <Card title="Contribución" icon="code-merge" href="/dev/contributing">
+    Como participar en el desarrollo del juego
   </Card>
 </Columns>
